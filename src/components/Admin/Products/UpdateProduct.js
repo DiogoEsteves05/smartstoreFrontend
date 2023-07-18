@@ -74,6 +74,7 @@ export default function UpdateProduct() {
                   />
                 </div>
               </div>
+              
               {/* Select category */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">

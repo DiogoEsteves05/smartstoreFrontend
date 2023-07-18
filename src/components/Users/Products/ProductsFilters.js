@@ -6,7 +6,7 @@ import {
   Transition,
   RadioGroup,
 } from "@headlessui/react";
-
+import { useDispatch, useSelector } from "react-redux";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import {
   ChevronDownIcon,
@@ -15,6 +15,13 @@ import {
   PlusIcon,
 } from "@heroicons/react/20/solid";
 import Products from "./Products";
+import { useSearchParams } from "react-router-dom";
+import baseURL from "../../../utils/baseURL";
+import { fetchProductsAction } from "../../../redux/slices/products/productSlices";
+import { fetchBrandsAction } from "../../../redux/slices/categories/brandsSlice";
+import LoadingComponent from "../../LoadingComp/LoadingComponent";
+import ErrorMsg from "../../ErrorMsg/ErrorMsg";
+import NoDataFound from "../../NoDataFound/NoDataFound";
 
 const sortOptions = [
   { name: "Most Popular", href: "#", current: true },
@@ -55,17 +62,59 @@ function classNames(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
-
 export default function ProductsFilters() {
+  //dispatch
+  const dispatch = useDispatch();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  //get query string
+  const [params, setParams] = useSearchParams();
+  const category = params.get("category");
+  //filters
+  const [price, setPrice] = useState("");
+  const [brand, setBrand] = useState("");
+  //build up url
+  let productUrl = `${baseURL}/products`;
+  if (category) {
+    productUrl = `${baseURL}/products?category=${category}`;
+  }
+  if (brand) {
+    productUrl = `${productUrl}&brand=${brand}`;
+  }
+  if (price) {
+    productUrl = `${productUrl}&price=${price}`;
+  }
+  //fetch all products
+  useEffect(() => {
+    dispatch(
+      fetchProductsAction({
+        url: productUrl,
+      })
+    );
+  }, [dispatch, category, brand, price]);
+  //get store data
+  const {
+    products: { products },
+    loading,
+    error,
+  } = useSelector((state) => state?.products);
 
-  let setPrice;
-  let brands;
-  let setBrand;
+  //fetch brands
+  useEffect(() => {
+    dispatch(
+      fetchBrandsAction({
+        url: productUrl,
+      })
+    );
+  }, [dispatch]);
+  //get store data
+  const {
+    brands: { brands },
+  } = useSelector((state) => state?.brands);
+
+  //get store data
   let productsLoading;
   let productsError;
-  let products;
 
   return (
     <div className="bg-white">
@@ -273,7 +322,7 @@ export default function ProductsFilters() {
             {/* sort */}
             <div className="flex items-center">
               <Menu as="div" className="relative inline-block text-left">
-                <div>
+                {/* <div>
                   <Menu.Button className="group inline-flex justify-center text-sm font-medium text-gray-700 hover:text-gray-900">
                     Sort
                     <ChevronDownIcon
@@ -281,7 +330,7 @@ export default function ProductsFilters() {
                       aria-hidden="true"
                     />
                   </Menu.Button>
-                </div>
+                </div> */}
 
                 {/* sort item links */}
                 <Transition
@@ -335,7 +384,6 @@ export default function ProductsFilters() {
               {/* Desktop  Filters */}
               <form className="hidden lg:block">
                 <h3 className="sr-only">Categories</h3>
-
                 {/* price categories section Desktop*/}
                 <Disclosure
                   as="div"
@@ -433,13 +481,16 @@ export default function ProductsFilters() {
                   )}
                 </Disclosure>
                 {/*  end product brand categories section */}
+
               </form>
 
               {/* Product grid */}
-              {productsLoading ? (
-                <h2 className="text-xl">Loading...</h2>
-              ) : productsError ? (
-                <h2 className="text-red-500">{productsError}</h2>
+              {loading ? (
+                <LoadingComponent />
+              ) : error ? (
+                <ErrorMsg message={error?.message} />
+              ) : products?.length <= 0 ? (
+                <NoDataFound />
               ) : (
                 <Products products={products} />
               )}
